@@ -5,8 +5,9 @@
 ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 ![Vercel](https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white)
+![Vite PWA](https://img.shields.io/badge/Vite_PWA-FFC0CB?style=for-the-badge&logo=vite&logoColor=white)
 
-> **A secure, full-stack SaaS application for tracking job applications with real-time updates and enterprise-grade data privacy.**
+> **A secure, full-stack SaaS application for tracking job applications with real-time analytics, file storage, and PWA capabilities.**
 
 🔗 **[View Live Demo](https://job-tracker-six-iota.vercel.app/)**
 
@@ -14,17 +15,20 @@
 
 ## 📖 About The Project
 
-**JobTracker Pro** solves the chaos of job hunting. Instead of managing messy spreadsheets, users get a dedicated, private dashboard to track every stage of their application process—from "Applied" to "Offer."
+**JobTracker Pro** transforms the chaotic job hunt into a streamlined, professional workflow. Unlike simple spreadsheets, this is a full **Progressive Web App (PWA)** that offers enterprise-grade data privacy, file management for resumes, and visual analytics to track your progress.
 
-Built with a focus on security and scalability, this application uses **Row Level Security (RLS)** in PostgreSQL to ensure that every user's data is completely isolated. Even though it is a single-page application, it functions as a multi-tenant SaaS platform where thousands of users can manage their private data securely.
+Built with a "Privacy First" architecture, it uses **Row Level Security (RLS)** in PostgreSQL to ensure that every user's data—and their uploaded documents—are mathematically isolated and secure.
 
 ### 🌟 Key Features
 
+* **📱 Progressive Web App (PWA):** Fully installable on mobile and desktop devices with native-like performance.
+* **📂 File Storage System:** Integrated with Supabase Storage to securely upload and retrieve PDF resumes and cover letters.
+* **📋 Kanban Board & Grid Views:** Switch instantly between a visual Drag-and-Drop style board and a data-rich grid view.
+* **🌓 Dark Mode:** Fully responsive light/dark theme toggle that persists user preference.
+* **📈 Analytics Dashboard:** Visual bar charts (powered by Recharts) to track application progress and success rates.
+* **📝 Rich Job Details:** Track salaries, locations, and detailed interview notes with expandable UI.
 * **🔐 Private User Accounts:** Full authentication system (Sign Up/Login) powered by Supabase Auth.
-* **🛡️ Enterprise Security:** Data isolation implemented at the database level using PostgreSQL Row Level Security (RLS) policies.
-* **📊 Interactive Kanban-Style Tracking:** Instantly update application status (Applied, Interview, Rejected, Offer).
-* **⚡ Real-Time Performance:** Instant data fetching and state updates using React Hooks.
-* **📱 Responsive UI:** A modern, mobile-friendly interface built with Tailwind CSS and Lucide Icons.
+* **🛡️ Enterprise Security:** Data isolation implemented at the database level using PostgreSQL Row Level Security (RLS).
 
 ---
 
@@ -36,7 +40,8 @@ Built with a focus on security and scalability, this application uses **Row Leve
 | **Language** | TypeScript | Type-safe JavaScript for robust code |
 | **Styling** | Tailwind CSS | Utility-first CSS framework for rapid design |
 | **Backend** | Supabase | Open-source Firebase alternative (PostgreSQL) |
-| **Auth** | Supabase Auth | Secure email/password authentication |
+| **Storage** | Supabase Storage | Blob storage for Resumes/PDFs |
+| **Charts** | Recharts | Composable charting library for React |
 | **Deployment** | Vercel | CI/CD automated deployment |
 
 ---
@@ -68,7 +73,7 @@ VITE_SUPABASE_ANON_KEY=your_anon_key_here
 ### 4. Database Setup (SQL)
 Go to your Supabase SQL Editor and run this script to create the table and security policies:
 ```SQL
--- a. Create the Jobs table
+-- 1. Create the Jobs table with all Pro features
 create table jobs (
   id uuid default gen_random_uuid() primary key,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
@@ -76,18 +81,37 @@ create table jobs (
   position text not null,
   status text not null,
   date_applied date not null default CURRENT_DATE,
+  salary text,
+  location text,
+  notes text,
+  resume_url text,
+  resume_name text,
   user_id uuid references auth.users not null default auth.uid()
 );
 
--- b. Enable Row Level Security (Security Wall)
+-- 2. Enable Row Level Security (Security Wall)
 alter table jobs enable row level security;
 
--- c. Create Access Policy (The "Private Key")
+-- 3. Create Access Policy (The "Private Key")
 create policy "User can only access their own jobs"
   on jobs for all
   using (auth.uid() = user_id);
 ```
-### 5. Run the App
+### 5. Storage Setup (For Resumes)
+```Bash
+1. Go to Storage in your Supabase Dashboard.
+
+2.Create a new bucket named resumes.
+
+3.Keep it Private.
+
+4.Add a Policy to the bucket:
+  * Name: Allow authenticated uploads
+  * Allowed Operations: SELECT, INSERT, UPDATE, DELETE
+  * Target Roles: authenticated
+```
+
+### 6. Run the App
 ```Bash
 npm run dev
 ```
