@@ -29,9 +29,11 @@ function App() {
   const [filterStatus, setFilterStatus] = useState('All');
 
   useEffect(() => {
+    // 1. Theme Check
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') { setDarkMode(true); document.documentElement.classList.add('dark'); }
     
+    // 2. Auth Check
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) fetchJobs(); else setLoading(false);
@@ -42,8 +44,42 @@ function App() {
       if (session) fetchJobs(); else setJobs([]);
     });
 
+    // 3. Request Notification Permission
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      Notification.requestPermission();
+    }
+
     return () => subscription.unsubscribe();
   }, []);
+
+  // 4. Notification Logic: Runs whenever 'jobs' are updated
+  useEffect(() => {
+    if (jobs.length > 0 && 'Notification' in window && Notification.permission === 'granted') {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const upcomingInterviews = jobs.filter(job => {
+        if (job.status !== 'Interview') return false;
+        const jobDate = new Date(job.date_applied);
+        // Check if date matches today or tomorrow (ignoring time)
+        return jobDate.toDateString() === today.toDateString() || 
+               jobDate.toDateString() === tomorrow.toDateString();
+      });
+
+      // Prevent spamming: Only notify if we haven't notified for this specific job today
+      upcomingInterviews.forEach(job => {
+        const notificationKey = `notified-${job.id}-${new Date().toDateString()}`;
+        if (!localStorage.getItem(notificationKey)) {
+          new Notification(`📅 Interview Reminder: ${job.company}`, {
+            body: `You have an interview coming up for the ${job.position} role! Good luck!`,
+            icon: '/vite.svg' // Uses the default vite icon
+          });
+          localStorage.setItem(notificationKey, 'true');
+        }
+      });
+    }
+  }, [jobs]);
 
   const toggleTheme = () => {
     setDarkMode(!darkMode);
@@ -208,7 +244,7 @@ function App() {
            </form>
         </div>
         
-        {/* Controls & List (Same as before) */}
+        {/* Controls & List */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-3.5 text-gray-400" size={20} />
