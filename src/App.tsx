@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PlusCircle, LayoutDashboard, Loader2, LogOut, Search, Filter, Save, X } from 'lucide-react';
+import { PlusCircle, LayoutDashboard, Loader2, LogOut, Search, Filter, Save, X, Calendar } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import type { JobApplication, Status } from './types';
 import { JobCard } from './components/JobCard';
@@ -14,7 +14,9 @@ function App() {
   // Form State
   const [company, setCompany] = useState('');
   const [position, setPosition] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null); // Tracks which job we are editing
+  // Default date is Today
+  const [dateApplied, setDateApplied] = useState(new Date().toISOString().split('T')[0]); 
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,7 +55,6 @@ function App() {
     }
   };
 
-  // Handles both ADD and UPDATE logic
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!company || !position || !session) return;
@@ -63,17 +64,15 @@ function App() {
         // UPDATE Existing Job
         const { error } = await supabase
           .from('jobs')
-          .update({ company, position })
+          .update({ company, position, date_applied: dateApplied }) // Update date too
           .eq('id', editingId);
 
         if (error) throw error;
 
-        // Update local state instantly
         setJobs(jobs.map(job => 
-          job.id === editingId ? { ...job, company, position } : job
+          job.id === editingId ? { ...job, company, position, date_applied: dateApplied } : job
         ));
         
-        // Reset form
         setEditingId(null);
       } else {
         // CREATE New Job
@@ -81,7 +80,7 @@ function App() {
           company,
           position,
           status: 'Applied',
-          date_applied: new Date().toISOString().split('T')[0],
+          date_applied: dateApplied, // Use the user-picked date
           user_id: session.user.id
         };
 
@@ -90,9 +89,10 @@ function App() {
         if (data) setJobs([data[0], ...jobs]);
       }
 
-      // Clear inputs
+      // Reset form
       setCompany('');
       setPosition('');
+      setDateApplied(new Date().toISOString().split('T')[0]); // Reset to Today
     } catch (error) {
       console.error('Error saving job:', error);
     }
@@ -102,7 +102,7 @@ function App() {
     setEditingId(job.id);
     setCompany(job.company);
     setPosition(job.position);
-    // Scroll to top so user sees the form
+    setDateApplied(job.date_applied); // Load the job's date
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -110,6 +110,7 @@ function App() {
     setEditingId(null);
     setCompany('');
     setPosition('');
+    setDateApplied(new Date().toISOString().split('T')[0]);
   };
 
   const deleteJob = async (id: string) => {
@@ -181,25 +182,37 @@ function App() {
             )}
           </div>
           
-          <form onSubmit={handleSubmit} className="flex gap-4 flex-col sm:flex-row">
-            <input
-              type="text"
-              placeholder="Company Name"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="text"
-              placeholder="Position"
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-              className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <form onSubmit={handleSubmit} className="flex gap-4 flex-col sm:flex-row items-start">
+            <div className="flex-1 w-full gap-4 flex flex-col sm:flex-row">
+              <input
+                type="text"
+                placeholder="Company Name"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+              />
+              <input
+                type="text"
+                placeholder="Position"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+                className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+              />
+              <div className="relative">
+                <Calendar className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                <input
+                  type="date"
+                  value={dateApplied}
+                  onChange={(e) => setDateApplied(e.target.value)}
+                  className="pl-10 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
+                />
+              </div>
+            </div>
+            
             <button 
               type="submit"
               disabled={loading}
-              className={`text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+              className={`text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 h-full ${
                 editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-900 hover:bg-black'
               }`}
             >
