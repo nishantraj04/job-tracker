@@ -7,5 +7,11 @@ export interface JobApplication {
   position: string;
   status: Status;
   date_applied: string;
-  user_id: string; 
+  user_id: string;
+  // New Fields
+  salary?: string;
+  location?: string;
+  notes?: string;
+  resume_url?: string;
+  resume_name?: string;
 }
