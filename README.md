@@ -106,7 +106,6 @@ create policy "User can only access their own jobs"
 3.Keep it Private.
 
 4.Add a Policy to the bucket:
-
   * Name: Allow authenticated uploads
   * Allowed Operations: SELECT, INSERT, UPDATE, DELETE
   * Target Roles: authenticated
