@@ -7,4 +7,5 @@ export interface JobApplication {
   position: string;
   status: Status;
   date_applied: string;
+  user_id: string; 
 }
