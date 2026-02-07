@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
-import { PlusCircle, LayoutDashboard, Loader2, LogOut, Search, Filter, Save, X, Calendar, Moon, Sun, Kanban, LayoutGrid, Upload, MapPin, DollarSign, FileText } from 'lucide-react';
+import { 
+  PlusCircle, LayoutDashboard, Loader2, LogOut, Search, 
+  Save, X, Calendar, Moon, Sun, Kanban, LayoutGrid, 
+  Upload, MapPin, DollarSign, User 
+} from 'lucide-react';
 import { supabase } from './supabaseClient';
 import type{ JobApplication, Status } from './types';
 import { JobCard } from './components/JobCard';
-import { JobChart } from './components/JobChart';
 import { Auth } from './components/Auth';
+import { Profile } from './components/Profile'; // NEW: Import Profile
 import type { Session } from '@supabase/supabase-js';
 
 function App() {
@@ -13,6 +17,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'board'>('grid');
+  
+  // NEW: Profile State
+  const [showProfile, setShowProfile] = useState(false);
   
   // Form State
   const [company, setCompany] = useState('');
@@ -52,9 +59,11 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 4. Notification Logic: Runs whenever 'jobs' are updated
+  // 4. Notification Logic
   useEffect(() => {
-    if (jobs.length > 0 && 'Notification' in window && Notification.permission === 'granted') {
+    const sendNotification = async () => {
+      if (jobs.length === 0 || !('Notification' in window) || Notification.permission !== 'granted') return;
+
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -62,23 +71,33 @@ function App() {
       const upcomingInterviews = jobs.filter(job => {
         if (job.status !== 'Interview') return false;
         const jobDate = new Date(job.date_applied);
-        // Check if date matches today or tomorrow (ignoring time)
         return jobDate.toDateString() === today.toDateString() || 
                jobDate.toDateString() === tomorrow.toDateString();
       });
 
-      // Prevent spamming: Only notify if we haven't notified for this specific job today
-      upcomingInterviews.forEach(job => {
+      for (const job of upcomingInterviews) {
         const notificationKey = `notified-${job.id}-${new Date().toDateString()}`;
         if (!localStorage.getItem(notificationKey)) {
-          new Notification(`📅 Interview Reminder: ${job.company}`, {
+          const title = `📅 Interview Reminder: ${job.company}`;
+          const options = {
             body: `You have an interview coming up for the ${job.position} role! Good luck!`,
-            icon: '/vite.svg' // Uses the default vite icon
-          });
-          localStorage.setItem(notificationKey, 'true');
+            icon: '/vite.svg',
+            badge: '/vite.svg'
+          };
+          try {
+            if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+              const registration = await navigator.serviceWorker.ready;
+              if (registration.showNotification) await registration.showNotification(title, options);
+              else new Notification(title, options);
+            } else {
+              new Notification(title, options);
+            }
+            localStorage.setItem(notificationKey, 'true');
+          } catch (error) { console.error("Notification failed silently:", error); }
         }
-      });
-    }
+      }
+    };
+    sendNotification();
   }, [jobs]);
 
   const toggleTheme = () => {
@@ -96,6 +115,9 @@ function App() {
 
   const uploadResume = async (userId: string): Promise<{ url: string, name: string } | null> => {
     if (!file) return null;
+    if (file.type !== 'application/pdf') { alert("Only PDF files are allowed."); return null; }
+    if (file.size > 5 * 1024 * 1024) { alert("File is too large! Max 5MB."); return null; }
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Math.random()}.${fileExt}`;
     const filePath = `${fileName}`;
@@ -104,11 +126,7 @@ function App() {
     const { error: uploadError } = await supabase.storage.from('resumes').upload(filePath, file);
     setUploading(false);
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      return null;
-    }
-
+    if (uploadError) { console.error('Upload error:', uploadError); alert('Failed to upload resume.'); return null; }
     const { data } = supabase.storage.from('resumes').getPublicUrl(filePath);
     return { url: data.publicUrl, name: file.name };
   };
@@ -121,13 +139,11 @@ function App() {
       let resumeData = null;
       if (file) {
         resumeData = await uploadResume(session.user.id);
+        if (!resumeData) return;
       }
 
       const jobData: any = { company, position, date_applied: dateApplied, salary, location, notes };
-      if (resumeData) {
-        jobData.resume_url = resumeData.url;
-        jobData.resume_name = resumeData.name;
-      }
+      if (resumeData) { jobData.resume_url = resumeData.url; jobData.resume_name = resumeData.name; }
 
       if (editingId) {
         const { error } = await supabase.from('jobs').update(jobData).eq('id', editingId);
@@ -187,12 +203,21 @@ function App() {
            <button onClick={toggleTheme} className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
            </button>
-           <span className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">{session.user.email}</span>
+           
+           {/* NEW: Profile Button */}
+           <button onClick={() => setShowProfile(true)} className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
+             <User size={20} />
+             <span className="hidden sm:block">Profile</span>
+           </button>
+
            <button onClick={() => supabase.auth.signOut()} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-red-600 flex items-center gap-2">
              <LogOut size={16} /> Sign Out
            </button>
         </div>
       </nav>
+
+      {/* NEW: Profile Modal */}
+      {showProfile && <Profile session={session} onClose={() => setShowProfile(false)} />}
 
       <div className="max-w-6xl mx-auto p-6">
         {/* Form Section */}
@@ -233,8 +258,8 @@ function App() {
                <div className="flex-1 w-full relative">
                  <label className="flex items-center gap-2 p-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                    <Upload size={20} className="text-gray-400" />
-                   <span className="text-gray-500 dark:text-gray-400 text-sm truncate">{file ? file.name : "Attach Resume / Cover Letter (PDF)"}</span>
-                   <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)} className="hidden" />
+                   <span className="text-gray-500 dark:text-gray-400 text-sm truncate">{file ? file.name : "Attach Resume (PDF Only, Max 5MB)"}</span>
+                   <input type="file" accept=".pdf" onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)} className="hidden" />
                  </label>
                </div>
                <button type="submit" disabled={loading || uploading} className={`flex-1 w-full text-white px-6 py-3 rounded-lg font-bold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 ${editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-900 hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-700'}`}>
