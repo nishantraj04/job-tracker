@@ -7,42 +7,43 @@
 ![Vercel](https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white)
 ![Vite PWA](https://img.shields.io/badge/Vite_PWA-FFC0CB?style=for-the-badge&logo=vite&logoColor=white)
 
-> **A secure, full-stack SaaS application for tracking job applications with real-time analytics, file storage, and PWA capabilities.**
+**JobTracker Pro** is a full-stack career management platform designed to help developers and professionals organize their job search and showcase their portfolio. It combines a powerful **Application Tracking System (ATS)** with a beautiful, public-facing **Portfolio Page**.
 
 🔗 **[View Live Demo](https://job-tracker-six-iota.vercel.app/)**
 
 ---
 
-## 📖 About The Project
+## 🌟 Features
 
-**JobTracker Pro** transforms the chaotic job hunt into a streamlined, professional workflow. Unlike simple spreadsheets, this is a full **Progressive Web App (PWA)** that offers enterprise-grade data privacy, file management for resumes, and visual analytics to track your progress.
+### 💼 Career Dashboard
+* **Job Tracking:** Log applications with details like Company, Position, Salary, and Status.
+* **Kanban Board:** Drag-and-drop board to visualize your application pipeline (Applied → Interview → Offer).
+* **Analytics:** Real-time metrics on your response rate, total applications, and interview schedule.
+* **Resume Management:** Attach specific resumes to specific job applications.
+* **Calendar Integration:** "This Week" widget to track upcoming interviews.
 
-Built with a "Privacy First" architecture, it uses **Row Level Security (RLS)** in PostgreSQL to ensure that every user's data—and their uploaded documents—are mathematically isolated and secure.
+### 🌎 Public Portfolio
+* **Personalized URL:** Share your profile via `jobtracker.pro/p/yourname`.
+* **Rich Profile:** Showcase your Bio, Experience, Education, and Skills.
+* **Project Showcase:** Add featured projects with tech stacks and links.
+* **Social Hub:** Link up to 5 social profiles (GitHub, LinkedIn, Twitter, etc.).
+* **Customization:** Upload custom Cover Images and Avatars.
 
-### 🌟 Key Features
-
-* **📱 Progressive Web App (PWA):** Fully installable on mobile and desktop devices with native-like performance.
-* **📂 File Storage System:** Integrated with Supabase Storage to securely upload and retrieve PDF resumes and cover letters.
-* **📋 Kanban Board & Grid Views:** Switch instantly between a visual Drag-and-Drop style board and a data-rich grid view.
-* **🌓 Dark Mode:** Fully responsive light/dark theme toggle that persists user preference.
-* **📈 Analytics Dashboard:** Visual bar charts (powered by Recharts) to track application progress and success rates.
-* **📝 Rich Job Details:** Track salaries, locations, and detailed interview notes with expandable UI.
-* **🔐 Private User Accounts:** Full authentication system (Sign Up/Login) powered by Supabase Auth.
-* **🛡️ Enterprise Security:** Data isolation implemented at the database level using PostgreSQL Row Level Security (RLS).
+### 🛡️ Security & Tech
+* **Authentication:** Secure login via Google, GitHub, or Magic Link (Email).
+* **Smart Sync:** Automatically syncs avatar and name from Google/GitHub.
+* **Row Level Security (RLS):** Users can only see and edit their own private data.
+* **Dark Mode:** Fully responsive UI with System/Dark/Light theme switching.
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Domain | Technology | Description |
-| :--- | :--- | :--- |
-| **Frontend** | React.js (Vite) | Fast, component-based UI library |
-| **Language** | TypeScript | Type-safe JavaScript for robust code |
-| **Styling** | Tailwind CSS | Utility-first CSS framework for rapid design |
-| **Backend** | Supabase | Open-source Firebase alternative (PostgreSQL) |
-| **Storage** | Supabase Storage | Blob storage for Resumes/PDFs |
-| **Charts** | Recharts | Composable charting library for React |
-| **Deployment** | Vercel | CI/CD automated deployment |
+* **Frontend:** React 18, TypeScript, Vite
+* **Styling:** Tailwind CSS, Lucide React (Icons)
+* **Backend & Auth:** Supabase (PostgreSQL)
+* **Storage:** Supabase Storage (for Resumes & Images)
+* **Routing:** React Router DOM
 
 ---
 
@@ -70,53 +71,108 @@ Create a .env file in the root directory and add your Supabase keys. (You can fi
 VITE_SUPABASE_URL=your_project_url_here
 VITE_SUPABASE_ANON_KEY=your_anon_key_here
 ```
-### 4. Database Setup (SQL)
-Go to your Supabase SQL Editor and run this script to create the table and security policies:
+### 4. Run the App
+```Bash
+npm run dev
+```
+Open http://localhost:5173 to view it in the browser.
+
+---
+
+## ⚡ Supabase Database Setup (SQL)
+
+To make the app work, you need to run these commands in your **Supabase SQL Editor**. This sets up the tables, security policies, and automatic profile creation.
+
+**A. Create Tables**
 ```SQL
--- 1. Create the Jobs table with all Pro features
-create table jobs (
+-- 1. Create Jobs Table
+create table public.jobs (
   id uuid default gen_random_uuid() primary key,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  user_id uuid references auth.users not null,
   company text not null,
   position text not null,
-  status text not null,
-  date_applied date not null default CURRENT_DATE,
+  status text check (status in ('Applied', 'Interview', 'Offer', 'Rejected')) default 'Applied',
+  date_applied date default current_date,
+  interview_date timestamp with time zone,
   salary text,
   location text,
   notes text,
   resume_url text,
   resume_name text,
-  user_id uuid references auth.users not null default auth.uid()
+  created_at timestamp with time zone default timezone('utc'::text, now())
 );
 
--- 2. Enable Row Level Security (Security Wall)
+-- 2. Create Profiles Table (Rich Portfolio)
+create table public.profiles (
+  id uuid references auth.users on delete cascade primary key,
+  email text,
+  full_name text,
+  avatar_url text,
+  username text unique,
+  headline text,
+  about text,
+  location text,
+  website text,
+  university text,
+  graduation_year text,
+  skills text,
+  cover_url text,
+  social_links jsonb default '[]'::jsonb,
+  projects jsonb default '[]'::jsonb,
+  updated_at timestamp with time zone
+);
+```
+**B. Enable Row Level Security (RLS)**
+```SQL
+-- Jobs: Private (Only owner can see)
 alter table jobs enable row level security;
+create policy "Users can CRUD their own jobs" on jobs
+  for all using (auth.uid() = user_id);
 
--- 3. Create Access Policy (The "Private Key")
-create policy "User can only access their own jobs"
-  on jobs for all
-  using (auth.uid() = user_id);
+-- Profiles: Public Read, Private Update
+alter table profiles enable row level security;
+create policy "Public profiles are viewable by everyone" on profiles
+  for select using (true);
+create policy "Users can update own profile" on profiles
+  for update using (auth.uid() = id);
+create policy "Users can insert own profile" on profiles
+  for insert with check (auth.uid() = id);
 ```
-### 5. Storage Setup (For Resumes)
-```Bash
-1. Go to Storage in your Supabase Dashboard.
+**C. Auto-Create Profile on Signup (Trigger)**
+```SQL
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, full_name, avatar_url, email)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', ''),
+    coalesce(new.raw_user_meta_data->>'avatar_url', ''),
+    new.email
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
 
-2.Create a new bucket named resumes.
-
-3.Keep it Private.
-
-4.Add a Policy to the bucket:
-  * Name: Allow authenticated uploads
-  * Allowed Operations: SELECT, INSERT, UPDATE, DELETE
-  * Target Roles: authenticated
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
 ```
+**D. Storage Buckets**
 
-### 6. Run the App
-```Bash
-npm run dev
+Run this to allow image/resume uploads:
+```SQL
+-- Create buckets
+insert into storage.buckets (id, name, public) values 
+('avatars', 'avatars', true),
+('covers', 'covers', true),
+('resumes', 'resumes', true);
+
+-- Policies (Public Read, Owner Write)
+create policy "Public Access" on storage.objects for select using ( bucket_id in ('avatars', 'covers') );
+create policy "User Upload" on storage.objects for insert with check ( auth.uid() = owner );
 ```
-
-Open http://localhost:5173 to view it in the browser.
+---
 
 ## 🤝 Contributing
 
