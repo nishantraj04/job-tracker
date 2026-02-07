@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { Briefcase, MapPin, Calendar, DollarSign, FileText, Trash2, Edit, ExternalLink, MoreVertical } from 'lucide-react';
 import type{ JobApplication, Status } from '../types';
-import { Trash2, Briefcase, Calendar, Pencil, MapPin, DollarSign, FileText, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
 
 interface JobCardProps {
   job: JobApplication;
@@ -10,115 +10,106 @@ interface JobCardProps {
 }
 
 const statusColors = {
-  Applied: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  Interview: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-  Offer: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  Rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  Applied: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  Interview: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+  Offer: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800',
+  Rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800',
 };
 
-export const JobCard = ({ job, onDelete, onStatusChange, onEdit }: JobCardProps) => {
-  const [showNotes, setShowNotes] = useState(false);
+export function JobCard({ job, onDelete, onStatusChange, onEdit }: JobCardProps) {
+  const [showMenu, setShowMenu] = useState(false);
 
-  // Smart Reminder Logic: If interview is coming up within 3 days
-  const isInterviewSoon = job.status === 'Interview' && new Date(job.date_applied) > new Date() && 
-    (new Date(job.date_applied).getTime() - new Date().getTime()) < (3 * 24 * 60 * 60 * 1000);
+  const handleStatusClick = () => {
+    const statuses: Status[] = ['Applied', 'Interview', 'Offer', 'Rejected'];
+    const currentIndex = statuses.indexOf(job.status);
+    const nextStatus = statuses[(currentIndex + 1) % statuses.length];
+    onStatusChange(job.id, nextStatus);
+  };
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-5 hover:shadow-md transition-all relative ${isInterviewSoon ? 'border-purple-400 ring-1 ring-purple-400' : 'border-gray-200 dark:border-gray-700'}`}>
+    <div className="group bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all relative">
       
-      {isInterviewSoon && (
-        <div className="absolute -top-3 right-4 bg-purple-600 text-white text-xs px-2 py-1 rounded-full shadow-sm">
-          Upcoming Interview!
-        </div>
-      )}
-
+      {/* Top Header */}
       <div className="flex justify-between items-start mb-3">
-        <div>
-          <h3 className="font-bold text-lg text-gray-900 dark:text-white">{job.company}</h3>
-          <div className="flex flex-col gap-1 mt-1">
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
-              <Briefcase size={14} />
-              <span>{job.position}</span>
-            </div>
-            {job.location && (
-              <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs">
-                <MapPin size={12} />
-                <span>{job.location}</span>
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 font-bold text-lg">
+            {job.company.substring(0, 1)}
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-900 dark:text-white leading-tight">{job.position}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{job.company}</p>
+          </div>
+        </div>
+        
+        <div className="relative">
+          <button onClick={() => setShowMenu(!showMenu)} className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 transition-colors">
+            <MoreVertical size={18} />
+          </button>
+          
+          {/* Dropdown Menu */}
+          {showMenu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)}></div>
+              <div className="absolute right-0 top-8 z-20 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden py-1">
+                <button onClick={() => { onEdit(job); setShowMenu(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
+                  <Edit size={14} /> Edit
+                </button>
+                <button onClick={() => onDelete(job.id)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                  <Trash2 size={14} /> Delete
+                </button>
               </div>
-            )}
-          </div>
-        </div>
-        <div className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[job.status]}`}>
-          {job.status}
+            </>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center gap-4 text-gray-400 text-xs mb-4">
-        <div className="flex items-center gap-1">
-          <Calendar size={14} />
-          <span>{job.date_applied}</span>
-        </div>
+      {/* Status Badge */}
+      <button 
+        onClick={handleStatusClick} 
+        className={`text-xs font-semibold px-2.5 py-1 rounded-full border mb-4 inline-flex items-center gap-1.5 transition-colors ${statusColors[job.status]}`}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full ${job.status === 'Offer' ? 'bg-green-500' : job.status === 'Rejected' ? 'bg-red-500' : 'bg-current'}`}></span>
+        {job.status}
+      </button>
+
+      {/* Details Grid */}
+      <div className="grid grid-cols-2 gap-y-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
+        {job.location && (
+          <div className="flex items-center gap-1.5">
+            <MapPin size={14} className="text-gray-400" /> {job.location}
+          </div>
+        )}
         {job.salary && (
-          <div className="flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">
-            <DollarSign size={14} />
-            <span>{job.salary}</span>
+          <div className="flex items-center gap-1.5">
+            <DollarSign size={14} className="text-gray-400" /> {job.salary}
+          </div>
+        )}
+        <div className="flex items-center gap-1.5 col-span-2">
+          <Calendar size={14} className="text-gray-400" /> Applied: {new Date(job.date_applied).toLocaleDateString()}
+        </div>
+        {/* @ts-ignore */}
+        {job.interview_date && (
+          <div className="flex items-center gap-1.5 col-span-2 text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/20 p-1.5 rounded-md mt-1">
+            <Calendar size={14} /> Interview: {new Date(job.interview_date).toLocaleDateString()}
           </div>
         )}
       </div>
 
-      {/* Resume & Notes Toggles */}
-      <div className="flex gap-3 mb-4">
-        {job.resume_url && (
-          <a 
-            href={job.resume_url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md"
-          >
-            <Download size={12} />
-            {job.resume_name || 'Resume'}
-          </a>
-        )}
-        {job.notes && (
-          <button 
-            onClick={() => setShowNotes(!showNotes)}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-          >
-            <FileText size={12} />
-            {showNotes ? 'Hide Notes' : 'Show Notes'}
-            {showNotes ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          </button>
-        )}
-      </div>
-
-      {/* Expandable Notes Section */}
-      {showNotes && job.notes && (
-        <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap border border-gray-100 dark:border-gray-700">
-          {job.notes}
-        </div>
-      )}
-
-      <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-        <select
-          value={job.status}
-          onChange={(e) => onStatusChange(job.id, e.target.value as Status)}
-          className="text-sm border border-gray-200 dark:border-gray-600 rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:text-white"
-        >
-          <option value="Applied">Applied</option>
-          <option value="Interview">Interview</option>
-          <option value="Offer">Offer</option>
-          <option value="Rejected">Rejected</option>
-        </select>
-
-        <div className="flex gap-2">
-          <button onClick={() => onEdit(job)} className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg">
-            <Pencil size={18} />
-          </button>
-          <button onClick={() => onDelete(job.id)} className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-gray-700 rounded-lg">
-            <Trash2 size={18} />
-          </button>
-        </div>
+      {/* Footer Actions */}
+      <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
+         {job.resume_url ? (
+           <a href={job.resume_url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+             <FileText size={14} /> View Resume
+           </a>
+         ) : (
+           <span className="text-xs text-gray-400 italic">No resume</span>
+         )}
+         
+         {/* Edit Button (Quick Action) */}
+         <button onClick={() => onEdit(job)} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <Edit size={16} />
+         </button>
       </div>
     </div>
   );
-};
+}
