@@ -1,11 +1,14 @@
-import { ArrowRight, CheckCircle, BarChart3, Shield, Zap, PlayCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, BarChart3, Shield, Zap, PlayCircle, Sun, Moon, Monitor } from 'lucide-react';
 
 interface LandingPageProps {
   onGetStarted: () => void;
-  onViewDemo: () => void; // <--- New Prop for Demo
+  onViewDemo: () => void;
+  // --- New Theme Props ---
+  theme: 'light' | 'dark' | 'system';
+  onCycleTheme: () => void;
 }
 
-export function LandingPage({ onGetStarted, onViewDemo }: LandingPageProps) {
+export function LandingPage({ onGetStarted, onViewDemo, theme, onCycleTheme }: LandingPageProps) {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors font-sans">
       {/* Navigation */}
@@ -18,18 +21,27 @@ export function LandingPage({ onGetStarted, onViewDemo }: LandingPageProps) {
             <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">JobTracker <span className="text-blue-600">Pro</span></span>
           </div>
           <div className="flex items-center gap-4">
-             <button 
-               onClick={onViewDemo}
-               className="hidden sm:block text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-             >
-               Live Demo
-             </button>
-             <button 
-               onClick={onGetStarted}
-               className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold rounded-lg hover:opacity-90 transition-opacity"
-             >
-               Sign In
-             </button>
+            {/* --- Theme Toggle Button Added Here --- */}
+            <button 
+              onClick={onCycleTheme} 
+              className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            >
+              {theme === 'light' ? <Sun size={20} /> : theme === 'dark' ? <Moon size={20} /> : <Monitor size={20} />}
+            </button>
+            <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
+            
+            <button 
+              onClick={onViewDemo}
+              className="hidden sm:block text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              Live Demo
+            </button>
+            <button 
+              onClick={onGetStarted}
+              className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold rounded-lg hover:opacity-90 transition-opacity"
+            >
+              Sign In
+            </button>
           </div>
         </div>
       </nav>
@@ -60,7 +72,7 @@ export function LandingPage({ onGetStarted, onViewDemo }: LandingPageProps) {
             Get Started for Free <ArrowRight size={20} />
           </button>
           <button 
-            onClick={onViewDemo} // <--- Connected!
+            onClick={onViewDemo} 
             className="px-8 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2"
           >
             <PlayCircle size={20} /> View Demo
